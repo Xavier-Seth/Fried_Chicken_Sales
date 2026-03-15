@@ -3,21 +3,34 @@ class SalesRecord {
   final String businessDate;
   final String date;
 
+  final int grossSales;
+  final int netSales;
   final int totalSales;
+  final int ticketDeduction;
   final int expectedCash;
   final int actualCash;
   final int difference;
 
+  final int chickenLargePrice;
+  final int chickenSmallPrice;
+  final int lumpiaPrice;
+  final int ricePrice;
+
+  final int soldChickenLarge;
+  final int soldChickenSmall;
+  final int soldLumpia;
+  final int soldRice;
+
   final String startingCashInput;
   final String actualCashCountedInput;
 
-  final String chicken20BeginningInput;
-  final String chicken20DeliveredInput;
-  final String chicken20RemainingInput;
+  final String chickenLargeBeginningInput;
+  final String chickenLargeDeliveredInput;
+  final String chickenLargeRemainingInput;
 
-  final String chicken10BeginningInput;
-  final String chicken10DeliveredInput;
-  final String chicken10RemainingInput;
+  final String chickenSmallBeginningInput;
+  final String chickenSmallDeliveredInput;
+  final String chickenSmallRemainingInput;
 
   final String lumpiaBeginningInput;
   final String lumpiaDeliveredInput;
@@ -30,18 +43,29 @@ class SalesRecord {
     required this.id,
     required this.businessDate,
     required this.date,
+    required this.grossSales,
+    required this.netSales,
     required this.totalSales,
+    required this.ticketDeduction,
     required this.expectedCash,
     required this.actualCash,
     required this.difference,
+    required this.chickenLargePrice,
+    required this.chickenSmallPrice,
+    required this.lumpiaPrice,
+    required this.ricePrice,
+    required this.soldChickenLarge,
+    required this.soldChickenSmall,
+    required this.soldLumpia,
+    required this.soldRice,
     required this.startingCashInput,
     required this.actualCashCountedInput,
-    required this.chicken20BeginningInput,
-    required this.chicken20DeliveredInput,
-    required this.chicken20RemainingInput,
-    required this.chicken10BeginningInput,
-    required this.chicken10DeliveredInput,
-    required this.chicken10RemainingInput,
+    required this.chickenLargeBeginningInput,
+    required this.chickenLargeDeliveredInput,
+    required this.chickenLargeRemainingInput,
+    required this.chickenSmallBeginningInput,
+    required this.chickenSmallDeliveredInput,
+    required this.chickenSmallRemainingInput,
     required this.lumpiaBeginningInput,
     required this.lumpiaDeliveredInput,
     required this.lumpiaRemainingInput,
@@ -54,18 +78,29 @@ class SalesRecord {
       'id': id,
       'businessDate': businessDate,
       'date': date,
+      'grossSales': grossSales,
+      'netSales': netSales,
       'totalSales': totalSales,
+      'ticketDeduction': ticketDeduction,
       'expectedCash': expectedCash,
       'actualCash': actualCash,
       'difference': difference,
+      'chickenLargePrice': chickenLargePrice,
+      'chickenSmallPrice': chickenSmallPrice,
+      'lumpiaPrice': lumpiaPrice,
+      'ricePrice': ricePrice,
+      'soldChickenLarge': soldChickenLarge,
+      'soldChickenSmall': soldChickenSmall,
+      'soldLumpia': soldLumpia,
+      'soldRice': soldRice,
       'startingCashInput': startingCashInput,
       'actualCashCountedInput': actualCashCountedInput,
-      'chicken20BeginningInput': chicken20BeginningInput,
-      'chicken20DeliveredInput': chicken20DeliveredInput,
-      'chicken20RemainingInput': chicken20RemainingInput,
-      'chicken10BeginningInput': chicken10BeginningInput,
-      'chicken10DeliveredInput': chicken10DeliveredInput,
-      'chicken10RemainingInput': chicken10RemainingInput,
+      'chickenLargeBeginningInput': chickenLargeBeginningInput,
+      'chickenLargeDeliveredInput': chickenLargeDeliveredInput,
+      'chickenLargeRemainingInput': chickenLargeRemainingInput,
+      'chickenSmallBeginningInput': chickenSmallBeginningInput,
+      'chickenSmallDeliveredInput': chickenSmallDeliveredInput,
+      'chickenSmallRemainingInput': chickenSmallRemainingInput,
       'lumpiaBeginningInput': lumpiaBeginningInput,
       'lumpiaDeliveredInput': lumpiaDeliveredInput,
       'lumpiaRemainingInput': lumpiaRemainingInput,
@@ -76,6 +111,9 @@ class SalesRecord {
 
   factory SalesRecord.fromMap(Map<String, dynamic> map) {
     final fallbackDate = (map['date'] ?? '').toString();
+    final legacyTotalSales = (map['totalSales'] ?? 0) as int;
+    final legacyGrossSales = (map['grossSales'] ?? legacyTotalSales) as int;
+    final legacyNetSales = (map['netSales'] ?? legacyTotalSales) as int;
 
     return SalesRecord(
       id: (map['id'] ?? '').toString(),
@@ -86,24 +124,56 @@ class SalesRecord {
                       : ''))
               .toString(),
       date: fallbackDate,
-      totalSales: map['totalSales'] ?? 0,
-      expectedCash: map['expectedCash'] ?? 0,
-      actualCash: map['actualCash'] ?? 0,
-      difference: map['difference'] ?? 0,
+      grossSales: legacyGrossSales,
+      netSales: legacyNetSales,
+      totalSales: legacyNetSales,
+      ticketDeduction: (map['ticketDeduction'] ?? 0) as int,
+      expectedCash: (map['expectedCash'] ?? 0) as int,
+      actualCash: (map['actualCash'] ?? 0) as int,
+      difference: (map['difference'] ?? 0) as int,
+      chickenLargePrice: (map['chickenLargePrice'] ?? 20) as int,
+      chickenSmallPrice:
+          (map['chickenSmallPrice'] ?? map['chicken10Price'] ?? 12) as int,
+      lumpiaPrice: (map['lumpiaPrice'] ?? 5) as int,
+      ricePrice: (map['ricePrice'] ?? 10) as int,
+      soldChickenLarge:
+          (map['soldChickenLarge'] ?? map['soldChicken20'] ?? 0) as int,
+      soldChickenSmall:
+          (map['soldChickenSmall'] ?? map['soldChicken10'] ?? 0) as int,
+      soldLumpia: (map['soldLumpia'] ?? 0) as int,
+      soldRice: (map['soldRice'] ?? 0) as int,
       startingCashInput: (map['startingCashInput'] ?? '').toString(),
       actualCashCountedInput: (map['actualCashCountedInput'] ?? '').toString(),
-      chicken20BeginningInput: (map['chicken20BeginningInput'] ?? '')
-          .toString(),
-      chicken20DeliveredInput: (map['chicken20DeliveredInput'] ?? '')
-          .toString(),
-      chicken20RemainingInput: (map['chicken20RemainingInput'] ?? '')
-          .toString(),
-      chicken10BeginningInput: (map['chicken10BeginningInput'] ?? '')
-          .toString(),
-      chicken10DeliveredInput: (map['chicken10DeliveredInput'] ?? '')
-          .toString(),
-      chicken10RemainingInput: (map['chicken10RemainingInput'] ?? '')
-          .toString(),
+      chickenLargeBeginningInput:
+          (map['chickenLargeBeginningInput'] ??
+                  map['chicken20BeginningInput'] ??
+                  '')
+              .toString(),
+      chickenLargeDeliveredInput:
+          (map['chickenLargeDeliveredInput'] ??
+                  map['chicken20DeliveredInput'] ??
+                  '')
+              .toString(),
+      chickenLargeRemainingInput:
+          (map['chickenLargeRemainingInput'] ??
+                  map['chicken20RemainingInput'] ??
+                  '')
+              .toString(),
+      chickenSmallBeginningInput:
+          (map['chickenSmallBeginningInput'] ??
+                  map['chicken10BeginningInput'] ??
+                  '')
+              .toString(),
+      chickenSmallDeliveredInput:
+          (map['chickenSmallDeliveredInput'] ??
+                  map['chicken10DeliveredInput'] ??
+                  '')
+              .toString(),
+      chickenSmallRemainingInput:
+          (map['chickenSmallRemainingInput'] ??
+                  map['chicken10RemainingInput'] ??
+                  '')
+              .toString(),
       lumpiaBeginningInput: (map['lumpiaBeginningInput'] ?? '').toString(),
       lumpiaDeliveredInput: (map['lumpiaDeliveredInput'] ?? '').toString(),
       lumpiaRemainingInput: (map['lumpiaRemainingInput'] ?? '').toString(),

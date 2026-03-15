@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
+import '../logic/sales_calculator.dart';
 import '../models/sales_record.dart';
+import '../services/sales_refresh_notifier.dart';
 import '../services/sales_storage.dart';
-import '../widgets/sales/cash_status_card.dart';
-import '../widgets/sales/product_card.dart';
-import '../widgets/sales/sales_breakdown_card.dart';
-import '../widgets/sales/section_card.dart';
-import '../widgets/sales/summary_tile.dart';
-import '../widgets/sales/validation_card.dart';
+import '../services/settings_service.dart';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
@@ -27,14 +25,15 @@ class _SalesPageState extends State<SalesPage>
 
   final startingCash = TextEditingController();
   final actualCashCounted = TextEditingController();
+  final ticketDeductionController = TextEditingController();
 
-  final chicken20Beginning = TextEditingController();
-  final chicken20Delivered = TextEditingController();
-  final chicken20Remaining = TextEditingController();
+  final chickenLargeBeginning = TextEditingController();
+  final chickenLargeDelivered = TextEditingController();
+  final chickenLargeRemaining = TextEditingController();
 
-  final chicken10Beginning = TextEditingController();
-  final chicken10Delivered = TextEditingController();
-  final chicken10Remaining = TextEditingController();
+  final chickenSmallBeginning = TextEditingController();
+  final chickenSmallDelivered = TextEditingController();
+  final chickenSmallRemaining = TextEditingController();
 
   final lumpiaBeginning = TextEditingController();
   final lumpiaDelivered = TextEditingController();
@@ -43,17 +42,23 @@ class _SalesPageState extends State<SalesPage>
   final riceDelivered = TextEditingController();
   final riceRemaining = TextEditingController();
 
-  int soldChicken20 = 0;
-  int soldChicken10 = 0;
+  int chickenLargePrice = SettingsService.defaultChickenLargePrice;
+  int chickenSmallPrice = SettingsService.defaultChickenSmallPrice;
+  int lumpiaPrice = SettingsService.defaultLumpiaPrice;
+  int ricePrice = SettingsService.defaultRicePrice;
+
+  int soldChickenLarge = 0;
+  int soldChickenSmall = 0;
   int soldLumpia = 0;
   int soldRice = 0;
 
-  int totalSales = 0;
+  int grossSales = 0;
+  int netSales = 0;
   int expectedCash = 0;
   int cashDifference = 0;
 
   bool hasSavedToday = false;
-  bool isLoadingTodayRecord = true;
+  bool isLoading = true;
 
   @override
   bool get wantKeepAlive => true;
@@ -61,46 +66,54 @@ class _SalesPageState extends State<SalesPage>
   @override
   void initState() {
     super.initState();
-    loadTodayRecord();
+    SalesRefreshNotifier.refreshKey.addListener(_handleRefresh);
+    loadInitialData();
+  }
+
+  void _handleRefresh() {
+    loadInitialData();
   }
 
   String get todayBusinessDate =>
       DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-  int parseValue(TextEditingController controller) {
-    return int.tryParse(controller.text) ?? 0;
-  }
-
   bool get hasActualCashInput => actualCashCounted.text.trim().isNotEmpty;
+
+  int parseValue(TextEditingController controller) {
+    return int.tryParse(controller.text.trim()) ?? 0;
+  }
 
   bool hasNegativeValue(TextEditingController controller) {
     return controller.text.trim().startsWith('-');
   }
 
-  bool get invalidChicken20 {
-    final b = parseValue(chicken20Beginning);
-    final d = parseValue(chicken20Delivered);
-    final r = parseValue(chicken20Remaining);
+  bool get invalidChickenLarge {
+    final b = parseValue(chickenLargeBeginning);
+    final d = parseValue(chickenLargeDelivered);
+    final r = parseValue(chickenLargeRemaining);
+
     return r > (b + d) ||
-        hasNegativeValue(chicken20Beginning) ||
-        hasNegativeValue(chicken20Delivered) ||
-        hasNegativeValue(chicken20Remaining);
+        hasNegativeValue(chickenLargeBeginning) ||
+        hasNegativeValue(chickenLargeDelivered) ||
+        hasNegativeValue(chickenLargeRemaining);
   }
 
-  bool get invalidChicken10 {
-    final b = parseValue(chicken10Beginning);
-    final d = parseValue(chicken10Delivered);
-    final r = parseValue(chicken10Remaining);
+  bool get invalidChickenSmall {
+    final b = parseValue(chickenSmallBeginning);
+    final d = parseValue(chickenSmallDelivered);
+    final r = parseValue(chickenSmallRemaining);
+
     return r > (b + d) ||
-        hasNegativeValue(chicken10Beginning) ||
-        hasNegativeValue(chicken10Delivered) ||
-        hasNegativeValue(chicken10Remaining);
+        hasNegativeValue(chickenSmallBeginning) ||
+        hasNegativeValue(chickenSmallDelivered) ||
+        hasNegativeValue(chickenSmallRemaining);
   }
 
   bool get invalidLumpia {
     final b = parseValue(lumpiaBeginning);
     final d = parseValue(lumpiaDelivered);
     final r = parseValue(lumpiaRemaining);
+
     return r > (b + d) ||
         hasNegativeValue(lumpiaBeginning) ||
         hasNegativeValue(lumpiaDelivered) ||
@@ -110,126 +123,79 @@ class _SalesPageState extends State<SalesPage>
   bool get invalidRice {
     final d = parseValue(riceDelivered);
     final r = parseValue(riceRemaining);
+
     return r > d ||
         hasNegativeValue(riceDelivered) ||
         hasNegativeValue(riceRemaining);
   }
 
   bool get hasInvalidStock {
-    return invalidChicken20 || invalidChicken10 || invalidLumpia || invalidRice;
+    return invalidChickenLarge ||
+        invalidChickenSmall ||
+        invalidLumpia ||
+        invalidRice;
   }
 
   String getValidationMessage() {
-    if (invalidChicken20) {
-      return 'Chicken ₱20 is invalid. Remaining stock cannot be greater than beginning + delivered.';
+    final l10n = AppLocalizations.of(context);
+
+    if (invalidChickenLarge) {
+      return l10n.salesValidationChickenLarge;
     }
-    if (invalidChicken10) {
-      return 'Chicken ₱10 is invalid. Remaining stock cannot be greater than beginning + delivered.';
+    if (invalidChickenSmall) {
+      return l10n.salesValidationChickenSmall;
     }
     if (invalidLumpia) {
-      return 'Lumpia is invalid. Remaining stock cannot be greater than beginning + delivered.';
+      return l10n.salesValidationLumpia;
     }
     if (invalidRice) {
-      return 'Rice is invalid. Remaining rice cannot be greater than delivered rice.';
+      return l10n.salesValidationRice;
     }
     return '';
   }
 
-  bool hasValue(TextEditingController controller) {
-    return controller.text.trim().isNotEmpty;
+  bool get isCompletelyEmpty {
+    return startingCash.text.trim().isEmpty &&
+        actualCashCounted.text.trim().isEmpty &&
+        ticketDeductionController.text.trim().isEmpty &&
+        chickenLargeBeginning.text.trim().isEmpty &&
+        chickenLargeDelivered.text.trim().isEmpty &&
+        chickenLargeRemaining.text.trim().isEmpty &&
+        chickenSmallBeginning.text.trim().isEmpty &&
+        chickenSmallDelivered.text.trim().isEmpty &&
+        chickenSmallRemaining.text.trim().isEmpty &&
+        lumpiaBeginning.text.trim().isEmpty &&
+        lumpiaDelivered.text.trim().isEmpty &&
+        lumpiaRemaining.text.trim().isEmpty &&
+        riceDelivered.text.trim().isEmpty &&
+        riceRemaining.text.trim().isEmpty;
   }
 
-  int soldIfComplete({
-    required int beginning,
-    required int delivered,
-    required TextEditingController remainingController,
-  }) {
-    if (!hasValue(remainingController)) return 0;
-    final remaining = parseValue(remainingController);
-    return ((beginning + delivered) - remaining).clamp(0, 999999);
-  }
-
-  int soldRiceIfComplete() {
-    if (!hasValue(riceRemaining)) return 0;
-    final delivered = parseValue(riceDelivered);
-    final remaining = parseValue(riceRemaining);
-    return (delivered - remaining).clamp(0, 999999);
-  }
-
-  void calculateSales({bool showModal = false}) {
-    final startCash = int.tryParse(startingCash.text) ?? 0;
-    final actualCash = int.tryParse(actualCashCounted.text) ?? 0;
-
-    final c20b = int.tryParse(chicken20Beginning.text) ?? 0;
-    final c20d = int.tryParse(chicken20Delivered.text) ?? 0;
-
-    final c10b = int.tryParse(chicken10Beginning.text) ?? 0;
-    final c10d = int.tryParse(chicken10Delivered.text) ?? 0;
-
-    final lb = int.tryParse(lumpiaBeginning.text) ?? 0;
-    final ld = int.tryParse(lumpiaDelivered.text) ?? 0;
-
-    final safeSoldChicken20 = soldIfComplete(
-      beginning: c20b,
-      delivered: c20d,
-      remainingController: chicken20Remaining,
-    );
-    final safeSoldChicken10 = soldIfComplete(
-      beginning: c10b,
-      delivered: c10d,
-      remainingController: chicken10Remaining,
-    );
-    final safeSoldLumpia = soldIfComplete(
-      beginning: lb,
-      delivered: ld,
-      remainingController: lumpiaRemaining,
-    );
-    final safeSoldRice = soldRiceIfComplete();
-
-    final sales =
-        (safeSoldChicken20 * 20) +
-        (safeSoldChicken10 * 10) +
-        (safeSoldLumpia * 5) +
-        (safeSoldRice * 10);
-
-    final computedExpectedCash = startCash + sales;
-    final computedDifference = hasActualCashInput
-        ? actualCash - computedExpectedCash
-        : 0;
-
-    setState(() {
-      soldChicken20 = safeSoldChicken20;
-      soldChicken10 = safeSoldChicken10;
-      soldLumpia = safeSoldLumpia;
-      soldRice = safeSoldRice;
-      totalSales = sales;
-      expectedCash = computedExpectedCash;
-      cashDifference = computedDifference;
-    });
-
-    if (showModal) {
-      showSalesResultModal();
-    }
-  }
-
-  Future<void> loadTodayRecord() async {
+  Future<void> loadInitialData() async {
+    final settings = await SettingsService.getSettings();
     final record = await SalesStorage.getRecordByBusinessDate(
       todayBusinessDate,
     );
 
     if (!mounted) return;
 
+    chickenLargePrice = settings.chickenLargePrice;
+    chickenSmallPrice = settings.chickenSmallPrice;
+    lumpiaPrice = settings.lumpiaPrice;
+    ricePrice = settings.ricePrice;
+
     if (record != null) {
       startingCash.text = record.startingCashInput;
       actualCashCounted.text = record.actualCashCountedInput;
+      ticketDeductionController.text = record.ticketDeduction.toString();
 
-      chicken20Beginning.text = record.chicken20BeginningInput;
-      chicken20Delivered.text = record.chicken20DeliveredInput;
-      chicken20Remaining.text = record.chicken20RemainingInput;
+      chickenLargeBeginning.text = record.chickenLargeBeginningInput;
+      chickenLargeDelivered.text = record.chickenLargeDeliveredInput;
+      chickenLargeRemaining.text = record.chickenLargeRemainingInput;
 
-      chicken10Beginning.text = record.chicken10BeginningInput;
-      chicken10Delivered.text = record.chicken10DeliveredInput;
-      chicken10Remaining.text = record.chicken10RemainingInput;
+      chickenSmallBeginning.text = record.chickenSmallBeginningInput;
+      chickenSmallDelivered.text = record.chickenSmallDeliveredInput;
+      chickenSmallRemaining.text = record.chickenSmallRemainingInput;
 
       lumpiaBeginning.text = record.lumpiaBeginningInput;
       lumpiaDelivered.text = record.lumpiaDeliveredInput;
@@ -237,14 +203,55 @@ class _SalesPageState extends State<SalesPage>
 
       riceDelivered.text = record.riceDeliveredInput;
       riceRemaining.text = record.riceRemainingInput;
+    } else {
+      ticketDeductionController.text = '0';
     }
 
     setState(() {
       hasSavedToday = record != null;
-      isLoadingTodayRecord = false;
+      isLoading = false;
     });
 
     calculateSales();
+  }
+
+  void calculateSales({bool showModal = false}) {
+    final result = SalesCalculator.calculate(
+      startingCash: parseValue(startingCash),
+      actualCash: parseValue(actualCashCounted),
+      hasActualCashInput: hasActualCashInput,
+      chickenLargeBeginning: parseValue(chickenLargeBeginning),
+      chickenLargeDelivered: parseValue(chickenLargeDelivered),
+      chickenLargeRemaining: parseValue(chickenLargeRemaining),
+      chickenSmallBeginning: parseValue(chickenSmallBeginning),
+      chickenSmallDelivered: parseValue(chickenSmallDelivered),
+      chickenSmallRemaining: parseValue(chickenSmallRemaining),
+      lumpiaBeginning: parseValue(lumpiaBeginning),
+      lumpiaDelivered: parseValue(lumpiaDelivered),
+      lumpiaRemaining: parseValue(lumpiaRemaining),
+      riceDelivered: parseValue(riceDelivered),
+      riceRemaining: parseValue(riceRemaining),
+      chickenLargePrice: chickenLargePrice,
+      chickenSmallPrice: chickenSmallPrice,
+      lumpiaPrice: lumpiaPrice,
+      ricePrice: ricePrice,
+      ticketDeduction: parseValue(ticketDeductionController),
+    );
+
+    setState(() {
+      soldChickenLarge = result.soldChickenLarge;
+      soldChickenSmall = result.soldChickenSmall;
+      soldLumpia = result.soldLumpia;
+      soldRice = result.soldRice;
+      grossSales = result.grossSales;
+      netSales = result.netSales;
+      expectedCash = result.expectedCash;
+      cashDifference = result.cashDifference;
+    });
+
+    if (showModal) {
+      showSalesResultModal();
+    }
   }
 
   SalesRecord buildTodayRecord() {
@@ -254,18 +261,29 @@ class _SalesPageState extends State<SalesPage>
       id: todayBusinessDate,
       businessDate: todayBusinessDate,
       date: DateFormat('yyyy-MM-dd – hh:mm a').format(now),
-      totalSales: totalSales,
+      grossSales: grossSales,
+      netSales: netSales,
+      totalSales: netSales,
+      ticketDeduction: parseValue(ticketDeductionController),
       expectedCash: expectedCash,
-      actualCash: int.tryParse(actualCashCounted.text) ?? 0,
+      actualCash: parseValue(actualCashCounted),
       difference: cashDifference,
+      chickenLargePrice: chickenLargePrice,
+      chickenSmallPrice: chickenSmallPrice,
+      lumpiaPrice: lumpiaPrice,
+      ricePrice: ricePrice,
+      soldChickenLarge: soldChickenLarge,
+      soldChickenSmall: soldChickenSmall,
+      soldLumpia: soldLumpia,
+      soldRice: soldRice,
       startingCashInput: startingCash.text.trim(),
       actualCashCountedInput: actualCashCounted.text.trim(),
-      chicken20BeginningInput: chicken20Beginning.text.trim(),
-      chicken20DeliveredInput: chicken20Delivered.text.trim(),
-      chicken20RemainingInput: chicken20Remaining.text.trim(),
-      chicken10BeginningInput: chicken10Beginning.text.trim(),
-      chicken10DeliveredInput: chicken10Delivered.text.trim(),
-      chicken10RemainingInput: chicken10Remaining.text.trim(),
+      chickenLargeBeginningInput: chickenLargeBeginning.text.trim(),
+      chickenLargeDeliveredInput: chickenLargeDelivered.text.trim(),
+      chickenLargeRemainingInput: chickenLargeRemaining.text.trim(),
+      chickenSmallBeginningInput: chickenSmallBeginning.text.trim(),
+      chickenSmallDeliveredInput: chickenSmallDelivered.text.trim(),
+      chickenSmallRemainingInput: chickenSmallRemaining.text.trim(),
       lumpiaBeginningInput: lumpiaBeginning.text.trim(),
       lumpiaDeliveredInput: lumpiaDelivered.text.trim(),
       lumpiaRemainingInput: lumpiaRemaining.text.trim(),
@@ -277,14 +295,15 @@ class _SalesPageState extends State<SalesPage>
   void resetInputs() {
     startingCash.clear();
     actualCashCounted.clear();
+    ticketDeductionController.text = '0';
 
-    chicken20Beginning.clear();
-    chicken20Delivered.clear();
-    chicken20Remaining.clear();
+    chickenLargeBeginning.clear();
+    chickenLargeDelivered.clear();
+    chickenLargeRemaining.clear();
 
-    chicken10Beginning.clear();
-    chicken10Delivered.clear();
-    chicken10Remaining.clear();
+    chickenSmallBeginning.clear();
+    chickenSmallDelivered.clear();
+    chickenSmallRemaining.clear();
 
     lumpiaBeginning.clear();
     lumpiaDelivered.clear();
@@ -294,11 +313,12 @@ class _SalesPageState extends State<SalesPage>
     riceRemaining.clear();
 
     setState(() {
-      soldChicken20 = 0;
-      soldChicken10 = 0;
+      soldChickenLarge = 0;
+      soldChickenSmall = 0;
       soldLumpia = 0;
       soldRice = 0;
-      totalSales = 0;
+      grossSales = 0;
+      netSales = 0;
       expectedCash = 0;
       cashDifference = 0;
       hasSavedToday = false;
@@ -306,22 +326,25 @@ class _SalesPageState extends State<SalesPage>
   }
 
   Future<void> confirmReset() async {
+    final l10n = AppLocalizations.of(context);
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('I-reset ang mga input?'),
-          content: const Text(
-            'Mawawala ang lahat ng laman ng fields at mare-reset ang buod ng benta.',
-          ),
+          title: Text(l10n.salesResetDialogTitle),
+          content: Text(l10n.salesResetDialogMessage),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Kanselahin'),
+              child: Text(l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('I-reset'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B),
+              ),
+              child: Text(l10n.salesResetAction),
             ),
           ],
         );
@@ -334,7 +357,8 @@ class _SalesPageState extends State<SalesPage>
   }
 
   Future<void> showSalesResultModal() async {
-    final countedCashValue = int.tryParse(actualCashCounted.text) ?? 0;
+    final l10n = AppLocalizations.of(context);
+    final countedCashValue = parseValue(actualCashCounted);
 
     await showDialog(
       context: context,
@@ -343,18 +367,28 @@ class _SalesPageState extends State<SalesPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
-          title: const Text(
-            'Resulta ng Benta',
-            style: TextStyle(fontWeight: FontWeight.w700),
+          title: Text(
+            l10n.salesResultTitle,
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              modalRow('Kabuuang Benta', pesoFormat.format(totalSales)),
+              modalRow(l10n.salesGrossSales, pesoFormat.format(grossSales)),
               const SizedBox(height: 10),
-              modalRow('Inaasahang Pera', pesoFormat.format(expectedCash)),
+              modalRow(
+                l10n.salesTicketDeduction,
+                pesoFormat.format(parseValue(ticketDeductionController)),
+              ),
               const SizedBox(height: 10),
-              modalRow('Aktwal na Pera', pesoFormat.format(countedCashValue)),
+              modalRow(l10n.salesNetSales, pesoFormat.format(netSales)),
+              const SizedBox(height: 10),
+              modalRow(l10n.salesExpectedCash, pesoFormat.format(expectedCash)),
+              const SizedBox(height: 10),
+              modalRow(
+                l10n.salesActualCash,
+                pesoFormat.format(countedCashValue),
+              ),
               const SizedBox(height: 14),
               Container(
                 width: double.infinity,
@@ -370,13 +404,16 @@ class _SalesPageState extends State<SalesPage>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Pagkakaiba (${differenceLabel()})',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: differenceColor(),
+                    Expanded(
+                      child: Text(
+                        l10n.salesDifferenceWithStatus(differenceLabel()),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: differenceColor(),
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Text(
                       pesoFormat.format(cashDifference),
                       style: TextStyle(
@@ -392,7 +429,10 @@ class _SalesPageState extends State<SalesPage>
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B),
+              ),
+              child: Text(l10n.commonOk),
             ),
           ],
         );
@@ -401,95 +441,24 @@ class _SalesPageState extends State<SalesPage>
   }
 
   Color differenceColor() {
-    if (!hasActualCashInput) return const Color(0xFF202431);
+    if (!hasActualCashInput) return const Color(0xFF0F172A);
     if (cashDifference < 0) return Colors.red;
     if (cashDifference > 0) return Colors.green;
-    return const Color(0xFF202431);
+    return const Color(0xFF0F172A);
   }
 
   String differenceLabel() {
-    if (!hasActualCashInput) return 'Wala Pa';
-    if (cashDifference < 0) return 'Kulang';
-    if (cashDifference > 0) return 'Sobra';
-    return 'Tugma';
-  }
+    final l10n = AppLocalizations.of(context);
 
-  InputDecoration modernInputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFE6E8EF), width: 1.2),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.8),
-      ),
-      labelStyle: const TextStyle(color: Color(0xFF7A8194), fontSize: 14),
-    );
-  }
-
-  Widget inputField(String label, TextEditingController controller) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      onChanged: (_) => calculateSales(),
-      decoration: modernInputDecoration(label),
-    );
-  }
-
-  Widget modalRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF5C6475)),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF202431),
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  void dispose() {
-    startingCash.dispose();
-    actualCashCounted.dispose();
-
-    chicken20Beginning.dispose();
-    chicken20Delivered.dispose();
-    chicken20Remaining.dispose();
-
-    chicken10Beginning.dispose();
-    chicken10Delivered.dispose();
-    chicken10Remaining.dispose();
-
-    lumpiaBeginning.dispose();
-    lumpiaDelivered.dispose();
-    lumpiaRemaining.dispose();
-
-    riceDelivered.dispose();
-    riceRemaining.dispose();
-
-    super.dispose();
+    if (!hasActualCashInput) return l10n.salesDifferenceNoInputStatus;
+    if (cashDifference < 0) return l10n.salesDifferenceShort;
+    if (cashDifference > 0) return l10n.salesDifferenceOver;
+    return l10n.salesDifferenceMatch;
   }
 
   Future<void> saveCurrentRecord() async {
+    final l10n = AppLocalizations.of(context);
+
     calculateSales();
 
     if (hasInvalidStock) {
@@ -502,101 +471,17 @@ class _SalesPageState extends State<SalesPage>
       return;
     }
 
-    if (startingCash.text.trim().isEmpty &&
-        actualCashCounted.text.trim().isEmpty &&
-        chicken20Beginning.text.trim().isEmpty &&
-        chicken20Delivered.text.trim().isEmpty &&
-        chicken20Remaining.text.trim().isEmpty &&
-        chicken10Beginning.text.trim().isEmpty &&
-        chicken10Delivered.text.trim().isEmpty &&
-        chicken10Remaining.text.trim().isEmpty &&
-        lumpiaBeginning.text.trim().isEmpty &&
-        lumpiaDelivered.text.trim().isEmpty &&
-        lumpiaRemaining.text.trim().isEmpty &&
-        riceDelivered.text.trim().isEmpty &&
-        riceRemaining.text.trim().isEmpty) {
+    if (isCompletelyEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter at least some data before saving.'),
+        SnackBar(
+          content: Text(l10n.salesSaveEmptyError),
+          backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    final wasSavedToday = hasSavedToday;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Text(
-            wasSavedToday ? 'Update today’s record?' : 'Save today’s record?',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              modalRow('Kabuuang Benta', pesoFormat.format(totalSales)),
-              const SizedBox(height: 10),
-              modalRow('Inaasahang Pera', pesoFormat.format(expectedCash)),
-              const SizedBox(height: 10),
-              modalRow(
-                'Aktwal na Pera',
-                pesoFormat.format(int.tryParse(actualCashCounted.text) ?? 0),
-              ),
-              const SizedBox(height: 14),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: differenceColor().withAlpha(18),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: differenceColor().withAlpha(60)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Pagkakaiba (${differenceLabel()})',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: differenceColor(),
-                      ),
-                    ),
-                    Text(
-                      pesoFormat.format(cashDifference),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: differenceColor(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Kanselahin'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(wasSavedToday ? 'Update' : 'Save'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true) return;
-
+    final wasAlreadySaved = hasSavedToday;
     final record = buildTodayRecord();
     await SalesStorage.saveOrUpdateRecord(record);
 
@@ -606,217 +491,789 @@ class _SalesPageState extends State<SalesPage>
       hasSavedToday = true;
     });
 
+    SalesRefreshNotifier.notifyRefresh();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          wasSavedToday
-              ? 'Today’s record has been updated.'
-              : 'Today’s record has been saved.',
+          wasAlreadySaved ? l10n.salesUpdatedSuccess : l10n.salesSavedSuccess,
+        ),
+        backgroundColor: const Color(0xFFF59E0B),
+      ),
+    );
+  }
+
+  InputDecoration modernInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      isDense: true,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE6E8EF), width: 1.2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.8),
+      ),
+      labelStyle: const TextStyle(color: Color(0xFF7A8194), fontSize: 13),
+      floatingLabelStyle: const TextStyle(
+        color: Color(0xFFF59E0B),
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  Widget inputField(
+    String label,
+    TextEditingController controller, {
+    String? helperText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (helperText != null && helperText.trim().isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              helperText,
+              style: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 12,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: (_) => calculateSales(),
+          decoration: modernInputDecoration(label),
+        ),
+      ],
+    );
+  }
+
+  Widget modalRow(String label, String value) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: Color(0xFF5C6475)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF202431),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget heroCard() {
+    final l10n = AppLocalizations.of(context);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF59E0B), Color(0xFFF97316)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x30F59E0B),
+            blurRadius: 22,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.salesHeroTitle,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n.salesBusinessDate(todayBusinessDate),
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              topBadge(
+                l10n.salesPriceLarge,
+                pesoFormat.format(chickenLargePrice),
+              ),
+              const SizedBox(width: 8),
+              topBadge(
+                l10n.salesPriceSmall,
+                pesoFormat.format(chickenSmallPrice),
+              ),
+              const SizedBox(width: 8),
+              topBadge(l10n.salesPriceRice, pesoFormat.format(ricePrice)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget topBadge(String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(20),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withAlpha(28)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget sectionCard({
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget productCard({
+    required String title,
+    required String priceLabel,
+    required TextEditingController beginningController,
+    required TextEditingController deliveredController,
+    required TextEditingController remainingController,
+    required int soldQty,
+    required int lineSales,
+  }) {
+    final l10n = AppLocalizations.of(context);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.inventory_2_rounded, color: Color(0xFFF59E0B)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    priceLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFEA580C),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: inputField(l10n.salesBeginning, beginningController),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: inputField(l10n.salesDelivered, deliveredController),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: inputField(l10n.salesRemaining, remainingController),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              summaryPill(l10n.salesSold, '$soldQty'),
+              const SizedBox(width: 10),
+              summaryPill(l10n.salesSales, pesoFormat.format(lineSales)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget riceCard() {
+    final l10n = AppLocalizations.of(context);
+    final riceSales = soldRice * ricePrice;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.rice_bowl_rounded, color: Color(0xFFF59E0B)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.salesProductRice,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    l10n.salesPriceEach(pesoFormat.format(ricePrice)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFEA580C),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: inputField(l10n.salesDelivered, riceDelivered)),
+              const SizedBox(width: 10),
+              Expanded(child: inputField(l10n.salesRemaining, riceRemaining)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              summaryPill(l10n.salesSold, '$soldRice'),
+              const SizedBox(width: 10),
+              summaryPill(l10n.salesSales, pesoFormat.format(riceSales)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget summaryPill(String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget totalsCard() {
+    final l10n = AppLocalizations.of(context);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.salesSummaryTitle,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 14),
+          summaryRow(l10n.salesGrossSales, pesoFormat.format(grossSales)),
+          const SizedBox(height: 10),
+          summaryRow(
+            l10n.salesTicketDeduction,
+            pesoFormat.format(parseValue(ticketDeductionController)),
+          ),
+          const SizedBox(height: 10),
+          summaryRow(l10n.salesNetSales, pesoFormat.format(netSales)),
+          const SizedBox(height: 10),
+          summaryRow(l10n.salesExpectedCash, pesoFormat.format(expectedCash)),
+          const SizedBox(height: 10),
+          summaryRow(
+            l10n.salesActualCash,
+            hasActualCashInput
+                ? pesoFormat.format(parseValue(actualCashCounted))
+                : l10n.salesNoInputYet,
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: differenceColor().withAlpha(18),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: differenceColor().withAlpha(60)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.salesDifferenceWithStatus(differenceLabel()),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: differenceColor(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  hasActualCashInput
+                      ? pesoFormat.format(cashDifference)
+                      : l10n.salesDifferenceNoInput,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: differenceColor(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget summaryRow(String label, String value) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFF0F172A),
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget validationCard() {
+    if (!hasInvalidStock) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withAlpha(18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.red.withAlpha(60)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline_rounded, color: Colors.red),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              getValidationMessage(),
+              style: const TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget actionButtons() {
+    final l10n = AppLocalizations.of(context);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: confirmReset,
+                icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                label: Text(
+                  l10n.salesResetAction,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 12,
+                  ),
+                  side: const BorderSide(color: Color(0xFFF59E0B)),
+                  foregroundColor: const Color(0xFFF59E0B),
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => calculateSales(showModal: true),
+                icon: const Icon(Icons.calculate_rounded, size: 18),
+                label: Text(
+                  l10n.salesCalculateAction,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFF97316),
+                  minimumSize: const Size.fromHeight(52),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 12,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: saveCurrentRecord,
+                icon: const Icon(Icons.save_rounded, size: 18),
+                label: Text(
+                  hasSavedToday ? l10n.salesUpdateToday : l10n.salesSaveToday,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFF59E0B),
+                  minimumSize: const Size.fromHeight(52),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 12,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   @override
+  void dispose() {
+    SalesRefreshNotifier.refreshKey.removeListener(_handleRefresh);
+
+    startingCash.dispose();
+    actualCashCounted.dispose();
+    ticketDeductionController.dispose();
+
+    chickenLargeBeginning.dispose();
+    chickenLargeDelivered.dispose();
+    chickenLargeRemaining.dispose();
+
+    chickenSmallBeginning.dispose();
+    chickenSmallDelivered.dispose();
+    chickenSmallRemaining.dispose();
+
+    lumpiaBeginning.dispose();
+    lumpiaDelivered.dispose();
+    lumpiaRemaining.dispose();
+
+    riceDelivered.dispose();
+    riceRemaining.dispose();
+
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    final countedCashValue = int.tryParse(actualCashCounted.text) ?? 0;
-
-    if (isLoadingTodayRecord) {
-      return const Scaffold(
-        body: SafeArea(child: Center(child: CircularProgressIndicator())),
-      );
-    }
+    final l10n = AppLocalizations.of(context);
+    final chickenLargeLineSales = soldChickenLarge * chickenLargePrice;
+    final chickenSmallLineSales = soldChickenSmall * chickenSmallPrice;
+    final lumpiaLineSales = soldLumpia * lumpiaPrice;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F7FB),
       appBar: AppBar(
-        title: const Text(
-          'Arawang Benta',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          l10n.salesAppBarTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFFF6F7FB),
         surfaceTintColor: Colors.transparent,
-        actions: [
-          if (hasSavedToday)
-            const Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: Center(
-                child: Text(
-                  'Saved Today',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFF59E0B),
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 12),
+              children: [
+                heroCard(),
+                sectionCard(
+                  title: l10n.salesCashDetailsTitle,
+                  subtitle: l10n.salesCashDetailsSubtitle,
+                  child: Column(
+                    children: [
+                      inputField(l10n.salesStartingCash, startingCash),
+                      const SizedBox(height: 12),
+                      inputField(
+                        l10n.salesTicketDeductionToday,
+                        ticketDeductionController,
+                        helperText: l10n.salesTicketDeductionHelper,
+                      ),
+                      const SizedBox(height: 12),
+                      inputField(
+                        l10n.salesActualCashCounted,
+                        actualCashCounted,
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                sectionCard(
+                  title: l10n.salesProductsTitle,
+                  subtitle: l10n.salesProductsSubtitle,
+                  child: Column(
+                    children: [
+                      productCard(
+                        title: l10n.salesProductChickenLarge,
+                        priceLabel: l10n.salesPriceEach(
+                          pesoFormat.format(chickenLargePrice),
+                        ),
+                        beginningController: chickenLargeBeginning,
+                        deliveredController: chickenLargeDelivered,
+                        remainingController: chickenLargeRemaining,
+                        soldQty: soldChickenLarge,
+                        lineSales: chickenLargeLineSales,
+                      ),
+                      productCard(
+                        title: l10n.salesProductChickenSmall,
+                        priceLabel: l10n.salesPriceEach(
+                          pesoFormat.format(chickenSmallPrice),
+                        ),
+                        beginningController: chickenSmallBeginning,
+                        deliveredController: chickenSmallDelivered,
+                        remainingController: chickenSmallRemaining,
+                        soldQty: soldChickenSmall,
+                        lineSales: chickenSmallLineSales,
+                      ),
+                      productCard(
+                        title: l10n.salesProductLumpia,
+                        priceLabel: l10n.salesPriceEach(
+                          pesoFormat.format(lumpiaPrice),
+                        ),
+                        beginningController: lumpiaBeginning,
+                        deliveredController: lumpiaDelivered,
+                        remainingController: lumpiaRemaining,
+                        soldQty: soldLumpia,
+                        lineSales: lumpiaLineSales,
+                      ),
+                      riceCard(),
+                    ],
+                  ),
+                ),
+                validationCard(),
+                totalsCard(),
+                actionButtons(),
+              ],
             ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF59E0B), Color(0xFFF97316)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x33F59E0B),
-                      blurRadius: 22,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Buod ng Araw',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        SummaryTile(
-                          label: 'Kabuuang Benta',
-                          value: pesoFormat.format(totalSales),
-                          icon: Icons.payments_rounded,
-                        ),
-                        const SizedBox(width: 12),
-                        SummaryTile(
-                          label: 'Inaasahang Pera',
-                          value: pesoFormat.format(expectedCash),
-                          icon: Icons.account_balance_wallet_rounded,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              CashStatusCard(
-                cashDifference: cashDifference,
-                formattedDifference: pesoFormat.format(cashDifference.abs()),
-              ),
-              ValidationCard(
-                visible: hasInvalidStock,
-                message: getValidationMessage(),
-              ),
-              SectionCard(
-                icon: Icons.attach_money_rounded,
-                title: 'Panimulang Pera',
-                child: inputField('Ilagay ang panimulang pera', startingCash),
-              ),
-              SectionCard(
-                icon: Icons.point_of_sale_rounded,
-                title: 'Bilang ng Pera',
-                child: inputField(
-                  'Ilagay ang aktwal na nabilang na pera',
-                  actualCashCounted,
-                ),
-              ),
-              ProductCard(
-                title: 'Manok ₱20',
-                subtitle: 'Subaybayan ang benta ng manok',
-                icon: Icons.restaurant_rounded,
-                beginningField: inputField(
-                  'Panimulang Stock',
-                  chicken20Beginning,
-                ),
-                deliveredField: inputField('Naideliver', chicken20Delivered),
-                remainingField: inputField('Natira', chicken20Remaining),
-                soldText: 'Nabenta: $soldChicken20',
-                salesText: pesoFormat.format(soldChicken20 * 20),
-              ),
-              ProductCard(
-                title: 'Manok ₱10',
-                subtitle: 'Subaybayan ang benta ng regular na manok',
-                icon: Icons.lunch_dining_rounded,
-                beginningField: inputField(
-                  'Panimulang Stock',
-                  chicken10Beginning,
-                ),
-                deliveredField: inputField('Naideliver', chicken10Delivered),
-                remainingField: inputField('Natira', chicken10Remaining),
-                soldText: 'Nabenta: $soldChicken10',
-                salesText: pesoFormat.format(soldChicken10 * 10),
-              ),
-              ProductCard(
-                title: 'Lumpia ₱5',
-                subtitle: 'Subaybayan ang galaw ng stock ng lumpia',
-                icon: Icons.fastfood_rounded,
-                beginningField: inputField('Panimulang Stock', lumpiaBeginning),
-                deliveredField: inputField('Naideliver', lumpiaDelivered),
-                remainingField: inputField('Natira', lumpiaRemaining),
-                soldText: 'Nabenta: $soldLumpia',
-                salesText: pesoFormat.format(soldLumpia * 5),
-              ),
-              ProductCard(
-                title: 'Kanin ₱10',
-                subtitle: 'Sariwang niluluto araw-araw',
-                icon: Icons.rice_bowl_rounded,
-                deliveredField: inputField('Nalutong Kanin', riceDelivered),
-                remainingField: inputField('Natirang Kanin', riceRemaining),
-                soldText: 'Nabenta: $soldRice',
-                salesText: pesoFormat.format(soldRice * 10),
-              ),
-              const SizedBox(height: 4),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: saveCurrentRecord,
-                  icon: const Icon(Icons.save_rounded),
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    child: Text(
-                      hasSavedToday ? 'Update Today' : 'Save Today',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFF59E0B),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              SalesBreakdownCard(
-                soldChicken20: soldChicken20,
-                soldChicken10: soldChicken10,
-                soldLumpia: soldLumpia,
-                soldRice: soldRice,
-                totalSalesText: pesoFormat.format(totalSales),
-                expectedCashText: pesoFormat.format(expectedCash),
-                countedCashText: pesoFormat.format(countedCashValue),
-                cashDifferenceText: pesoFormat.format(cashDifference),
-                differenceLabel: differenceLabel(),
-                differenceColor: differenceColor(),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

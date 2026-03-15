@@ -1,0 +1,162 @@
+{
+  "@@locale": "fil",
+  "appTitle": "Calculator ng Benta ng Manok",
+  "navSales": "Benta",
+  "navHistory": "Kasaysayan",
+  "navCharts": "Tsart",
+  "navSettings": "Settings",
+  "salesAppBarTitle": "Arawang Benta",
+  "historyAppBarTitle": "Kasaysayan ng Benta",
+  "historyOverviewTitle": "Buod ng Benta",
+  "historyDaysCount": "{count, plural, =0{0 araw} =1{1 araw} other{{count} araw}}",
+  "@historyDaysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "historySummaryNet": "Net",
+  "historySummaryGross": "Gross",
+  "historySummaryTicket": "Ticket",
+  "historyRowGross": "Gross",
+  "historyRowTicket": "Ticket",
+  "historyRowNet": "Net",
+  "historyRowExpected": "Inaasahan",
+  "historyRowActual": "Aktuwal",
+  "historyStatusShort": "Kulang",
+  "historyStatusOver": "Sobra",
+  "historyStatusMatch": "Tugma",
+  "historyDeleteRecordTitle": "Burahin ang record?",
+  "historyDeleteRecordMessage": "Burahin ang naka-save na record para sa {date}?",
+  "@historyDeleteRecordMessage": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "historyDeleteAllTitle": "Burahin ang lahat ng history?",
+  "historyDeleteAllMessage": "Permanenteng mabubura ang lahat ng naka-save na record.",
+  "historyDeleteAllConfirm": "Burahin Lahat",
+  "historyEmptyTitle": "Wala pang records",
+  "chartsAppBarTitle": "Mga Tsart ng Benta",
+  "chartsHeroTitle": "Buod ng Tsart ng Benta",
+  "chartsHeroSubtitle": "Net sales para sa mga pinakahuling naka-save na araw.",
+  "chartsDaysSaved": "{count, plural, =0{0 araw} =1{1 araw} other{{count} araw}}",
+  "@chartsDaysSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chartsHighestNet": "Pinakamataas na Net",
+  "chartsTotalNet": "Kabuuang Net",
+  "chartsGross": "Gross",
+  "chartsSaved": "Naka-save",
+  "chartsEmptyTitle": "Wala pang data ng tsart",
+  "chartsEmptySubtitle": "Mag-save ng arawang benta mula sa Sales tab para makagawa ng chart data.",
+  "chartsRefresh": "I-refresh",
+  "chartsNetSalesChartTitle": "Tsart ng Net Sales",
+  "chartsLastSavedDays": "Huling {count} naka-save na araw",
+  "@chartsLastSavedDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppBarTitle": "Settings",
+  "settingsHeroTitle": "POS Settings",
+  "settingsHeroSubtitle": "I-update dito ang wika at presyo ng mga produkto.",
+  "settingsLanguageSectionTitle": "Wika",
+  "settingsLanguageSectionSubtitle": "Piliin ang wikang gagamitin ng app interface.",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageFilipino": "Filipino",
+  "settingsLanguageEnglishSubtitle": "Gamitin ang English sa buong app.",
+  "settingsLanguageFilipinoSubtitle": "Gamitin ang Filipino sa buong app.",
+  "settingsLanguageSaved": "Matagumpay na na-update ang wika.",
+  "settingsProductPricesTitle": "Presyo ng mga Produkto",
+  "settingsProductPricesSubtitle": "Gagamitin ang mga value na ito sa Sales, History, at Charts.",
+  "settingsChickenLargePrice": "Presyo ng Chicken Large",
+  "settingsChickenSmallPrice": "Presyo ng Chicken Small",
+  "settingsLumpiaPrice": "Presyo ng Lumpia",
+  "settingsRicePrice": "Presyo ng Rice",
+  "settingsDefaultPrice": "Default: {value}",
+  "@settingsDefaultPrice": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "settingsResetDefaults": "I-reset ang Default",
+  "settingsSaveSettings": "I-save ang Settings",
+  "settingsSavedSuccessfully": "Matagumpay na na-save ang settings.",
+  "settingsResetSuccessfully": "Na-reset na sa default ang settings.",
+  "commonCancel": "Kanselahin",
+  "commonDelete": "Burahin",
+  "commonOk": "OK",
+  "salesHeroTitle": "POS ng Benta ng Manok",
+  "salesBusinessDate": "Petsa ng Negosyo: {date}",
+  "@salesBusinessDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "salesPriceLarge": "Large",
+  "salesPriceSmall": "Small",
+  "salesPriceRice": "Rice",
+  "salesCashDetailsTitle": "Detalye ng Pera",
+  "salesCashDetailsSubtitle": "Ilagay ang panimulang pera, kaltas sa ticket, at aktuwal na nabilang na pera.",
+  "salesStartingCash": "Panimulang Pera",
+  "salesTicketDeductionToday": "Kaltas sa Ticket Ngayon",
+  "salesTicketDeductionHelper": "Ilagay ang 0 kung walang ticket ngayon. Halimbawa: 30, 60, atbp.",
+  "salesActualCashCounted": "Aktuwal na Nabilang na Pera",
+  "salesProductsTitle": "Mga Produkto",
+  "salesProductsSubtitle": "Ilagay ang galaw ng stock ng bawat item sa araw na ito.",
+  "salesProductChickenLarge": "Chicken Large",
+  "salesProductChickenSmall": "Chicken Small",
+  "salesProductLumpia": "Lumpia",
+  "salesProductRice": "Rice",
+  "salesPriceEach": "{price} bawat isa",
+  "@salesPriceEach": {
+    "placeholders": {
+      "price": {}
+    }
+  },
+  "salesBeginning": "Simula",
+  "salesDelivered": "Naideliver",
+  "salesRemaining": "Natira",
+  "salesSold": "Nabenta",
+  "salesSales": "Benta",
+  "salesSummaryTitle": "Buod",
+  "salesGrossSales": "Gross Sales",
+  "salesTicketDeduction": "Kaltas sa Ticket",
+  "salesNetSales": "Net Sales",
+  "salesExpectedCash": "Inaasahang Pera",
+  "salesActualCash": "Aktuwal na Pera",
+  "salesNoInputYet": "Wala pang input",
+  "salesDifferenceWithStatus": "Pagkakaiba ({status})",
+  "@salesDifferenceWithStatus": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "salesDifferenceNoInput": "Walang input",
+  "salesDifferenceNoInputStatus": "Walang Input",
+  "salesDifferenceShort": "Kulang",
+  "salesDifferenceOver": "Sobra",
+  "salesDifferenceMatch": "Tugma",
+  "salesValidationChickenLarge": "Hindi wasto ang Chicken Large. Hindi puwedeng mas mataas ang natitirang stock kaysa sa simula + naideliver.",
+  "salesValidationChickenSmall": "Hindi wasto ang Chicken Small. Hindi puwedeng mas mataas ang natitirang stock kaysa sa simula + naideliver.",
+  "salesValidationLumpia": "Hindi wasto ang Lumpia. Hindi puwedeng mas mataas ang natitirang stock kaysa sa simula + naideliver.",
+  "salesValidationRice": "Hindi wasto ang Rice. Hindi puwedeng mas mataas ang natitirang rice kaysa sa naideliver na rice.",
+  "salesResetDialogTitle": "I-reset ang lahat ng input?",
+  "salesResetDialogMessage": "Lilinisin nito ang lahat ng field sa page. Mananatili ang naka-save mong history maliban kung ma-overwrite ito kapag nag-save ka ulit.",
+  "salesResultTitle": "Resulta ng Benta",
+  "salesSaveEmptyError": "Maglagay muna ng kahit kaunting data bago mag-save.",
+  "salesUpdatedSuccess": "Matagumpay na na-update ang record ngayong araw.",
+  "salesSavedSuccess": "Matagumpay na na-save ang record ngayong araw.",
+  "salesResetAction": "I-reset",
+  "salesCalculateAction": "Kalkulahin",
+  "salesUpdateToday": "I-update Ngayon",
+  "salesSaveToday": "I-save Ngayon"
+}
