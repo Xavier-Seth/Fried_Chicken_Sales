@@ -31,9 +31,12 @@ class SalesStorage {
     final prefs = await SharedPreferences.getInstance();
     final existing = prefs.getStringList(key) ?? [];
 
-    return existing
+    final records = existing
         .map((item) => SalesRecord.fromMap(jsonDecode(item)))
         .toList();
+
+    records.sort((a, b) => b.businessDate.compareTo(a.businessDate));
+    return records;
   }
 
   static Future<SalesRecord?> getRecordByBusinessDate(

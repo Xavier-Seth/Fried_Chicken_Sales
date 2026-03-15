@@ -1,0 +1,162 @@
+{
+  "@@locale": "en",
+  "appTitle": "Chicken Sales Calculator",
+  "navSales": "Sales",
+  "navHistory": "History",
+  "navCharts": "Charts",
+  "navSettings": "Settings",
+  "salesAppBarTitle": "Daily Sales",
+  "historyAppBarTitle": "Sales History",
+  "historyOverviewTitle": "Sales Overview",
+  "historyDaysCount": "{count, plural, =0{0 days} =1{1 day} other{{count} days}}",
+  "@historyDaysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "historySummaryNet": "Net",
+  "historySummaryGross": "Gross",
+  "historySummaryTicket": "Ticket",
+  "historyRowGross": "Gross",
+  "historyRowTicket": "Ticket",
+  "historyRowNet": "Net",
+  "historyRowExpected": "Expected",
+  "historyRowActual": "Actual",
+  "historyStatusShort": "Short",
+  "historyStatusOver": "Over",
+  "historyStatusMatch": "Match",
+  "historyDeleteRecordTitle": "Delete record?",
+  "historyDeleteRecordMessage": "Delete saved record for {date}?",
+  "@historyDeleteRecordMessage": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "historyDeleteAllTitle": "Delete all history?",
+  "historyDeleteAllMessage": "This will remove all saved records permanently.",
+  "historyDeleteAllConfirm": "Delete All",
+  "historyEmptyTitle": "No records yet",
+  "chartsAppBarTitle": "Sales Charts",
+  "chartsHeroTitle": "Sales Chart Overview",
+  "chartsHeroSubtitle": "Net sales for the latest saved days.",
+  "chartsDaysSaved": "{count, plural, =0{0 days} =1{1 day} other{{count} days}}",
+  "@chartsDaysSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chartsHighestNet": "Highest Net",
+  "chartsTotalNet": "Total Net",
+  "chartsGross": "Gross",
+  "chartsSaved": "Saved",
+  "chartsEmptyTitle": "No chart data yet",
+  "chartsEmptySubtitle": "Save daily sales from the Sales tab to generate chart data.",
+  "chartsRefresh": "Refresh",
+  "chartsNetSalesChartTitle": "Net Sales Chart",
+  "chartsLastSavedDays": "Last {count} saved day(s)",
+  "@chartsLastSavedDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppBarTitle": "Settings",
+  "settingsHeroTitle": "POS Settings",
+  "settingsHeroSubtitle": "Update language and product prices here.",
+  "settingsLanguageSectionTitle": "Language",
+  "settingsLanguageSectionSubtitle": "Choose the language used by the app interface.",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageFilipino": "Filipino",
+  "settingsLanguageEnglishSubtitle": "Use English across the app.",
+  "settingsLanguageFilipinoSubtitle": "Use Filipino across the app.",
+  "settingsLanguageSaved": "Language updated successfully.",
+  "settingsProductPricesTitle": "Product Prices",
+  "settingsProductPricesSubtitle": "These values will be used in Sales, History, and Charts.",
+  "settingsChickenLargePrice": "Chicken Large Price",
+  "settingsChickenSmallPrice": "Chicken Small Price",
+  "settingsLumpiaPrice": "Lumpia Price",
+  "settingsRicePrice": "Rice Price",
+  "settingsDefaultPrice": "Default: {value}",
+  "@settingsDefaultPrice": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "settingsResetDefaults": "Reset Defaults",
+  "settingsSaveSettings": "Save Settings",
+  "settingsSavedSuccessfully": "Settings saved successfully.",
+  "settingsResetSuccessfully": "Settings reset to default values.",
+  "commonCancel": "Cancel",
+  "commonDelete": "Delete",
+  "commonOk": "OK",
+  "salesHeroTitle": "Chicken Sales POS",
+  "salesBusinessDate": "Business Date: {date}",
+  "@salesBusinessDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "salesPriceLarge": "Large",
+  "salesPriceSmall": "Small",
+  "salesPriceRice": "Rice",
+  "salesCashDetailsTitle": "Cash Details",
+  "salesCashDetailsSubtitle": "Enter your starting cash, ticket deduction, and actual counted cash.",
+  "salesStartingCash": "Starting Cash",
+  "salesTicketDeductionToday": "Ticket Deduction Today",
+  "salesTicketDeductionHelper": "Enter 0 if no ticket today. Example: 30, 60, etc.",
+  "salesActualCashCounted": "Actual Cash Counted",
+  "salesProductsTitle": "Products",
+  "salesProductsSubtitle": "Enter daily stock movement for each item.",
+  "salesProductChickenLarge": "Chicken Large",
+  "salesProductChickenSmall": "Chicken Small",
+  "salesProductLumpia": "Lumpia",
+  "salesProductRice": "Rice",
+  "salesPriceEach": "{price} each",
+  "@salesPriceEach": {
+    "placeholders": {
+      "price": {}
+    }
+  },
+  "salesBeginning": "Beginning",
+  "salesDelivered": "Delivered",
+  "salesRemaining": "Remaining",
+  "salesSold": "Sold",
+  "salesSales": "Sales",
+  "salesSummaryTitle": "Summary",
+  "salesGrossSales": "Gross Sales",
+  "salesTicketDeduction": "Ticket Deduction",
+  "salesNetSales": "Net Sales",
+  "salesExpectedCash": "Expected Cash",
+  "salesActualCash": "Actual Cash",
+  "salesNoInputYet": "No input yet",
+  "salesDifferenceWithStatus": "Difference ({status})",
+  "@salesDifferenceWithStatus": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "salesDifferenceNoInput": "No input",
+  "salesDifferenceNoInputStatus": "No Input",
+  "salesDifferenceShort": "Short",
+  "salesDifferenceOver": "Over",
+  "salesDifferenceMatch": "Match",
+  "salesValidationChickenLarge": "Chicken Large is invalid. Remaining stock cannot be greater than beginning + delivered.",
+  "salesValidationChickenSmall": "Chicken Small is invalid. Remaining stock cannot be greater than beginning + delivered.",
+  "salesValidationLumpia": "Lumpia is invalid. Remaining stock cannot be greater than beginning + delivered.",
+  "salesValidationRice": "Rice is invalid. Remaining rice cannot be greater than delivered rice.",
+  "salesResetDialogTitle": "Reset all inputs?",
+  "salesResetDialogMessage": "This will clear all fields on the page. Your saved history will stay unless you overwrite it by saving again.",
+  "salesResultTitle": "Sales Result",
+  "salesSaveEmptyError": "Please enter at least some data before saving.",
+  "salesUpdatedSuccess": "Today's record updated successfully.",
+  "salesSavedSuccess": "Today's record saved successfully.",
+  "salesResetAction": "Reset",
+  "salesCalculateAction": "Calculate",
+  "salesUpdateToday": "Update Today",
+  "salesSaveToday": "Save Today"
+}
