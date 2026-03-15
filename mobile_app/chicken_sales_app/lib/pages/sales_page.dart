@@ -154,10 +154,14 @@ class _SalesPageState extends State<SalesPage>
     return '';
   }
 
+  bool _isBlankOrZero(TextEditingController controller) {
+    return parseValue(controller) == 0;
+  }
+
   bool get isCompletelyEmpty {
     return startingCash.text.trim().isEmpty &&
         actualCashCounted.text.trim().isEmpty &&
-        ticketDeductionController.text.trim().isEmpty &&
+        _isBlankOrZero(ticketDeductionController) &&
         chickenLargeBeginning.text.trim().isEmpty &&
         chickenLargeDelivered.text.trim().isEmpty &&
         chickenLargeRemaining.text.trim().isEmpty &&
@@ -169,6 +173,38 @@ class _SalesPageState extends State<SalesPage>
         lumpiaRemaining.text.trim().isEmpty &&
         riceDelivered.text.trim().isEmpty &&
         riceRemaining.text.trim().isEmpty;
+  }
+
+  void clearFormInputs() {
+    startingCash.clear();
+    actualCashCounted.clear();
+    ticketDeductionController.text = '0';
+
+    chickenLargeBeginning.clear();
+    chickenLargeDelivered.clear();
+    chickenLargeRemaining.clear();
+
+    chickenSmallBeginning.clear();
+    chickenSmallDelivered.clear();
+    chickenSmallRemaining.clear();
+
+    lumpiaBeginning.clear();
+    lumpiaDelivered.clear();
+    lumpiaRemaining.clear();
+
+    riceDelivered.clear();
+    riceRemaining.clear();
+  }
+
+  void resetComputedValues() {
+    soldChickenLarge = 0;
+    soldChickenSmall = 0;
+    soldLumpia = 0;
+    soldRice = 0;
+    grossSales = 0;
+    netSales = 0;
+    expectedCash = 0;
+    cashDifference = 0;
   }
 
   Future<void> loadInitialData() async {
@@ -204,7 +240,7 @@ class _SalesPageState extends State<SalesPage>
       riceDelivered.text = record.riceDeliveredInput;
       riceRemaining.text = record.riceRemainingInput;
     } else {
-      ticketDeductionController.text = '0';
+      clearFormInputs();
     }
 
     setState(() {
@@ -293,35 +329,10 @@ class _SalesPageState extends State<SalesPage>
   }
 
   void resetInputs() {
-    startingCash.clear();
-    actualCashCounted.clear();
-    ticketDeductionController.text = '0';
-
-    chickenLargeBeginning.clear();
-    chickenLargeDelivered.clear();
-    chickenLargeRemaining.clear();
-
-    chickenSmallBeginning.clear();
-    chickenSmallDelivered.clear();
-    chickenSmallRemaining.clear();
-
-    lumpiaBeginning.clear();
-    lumpiaDelivered.clear();
-    lumpiaRemaining.clear();
-
-    riceDelivered.clear();
-    riceRemaining.clear();
+    clearFormInputs();
 
     setState(() {
-      soldChickenLarge = 0;
-      soldChickenSmall = 0;
-      soldLumpia = 0;
-      soldRice = 0;
-      grossSales = 0;
-      netSales = 0;
-      expectedCash = 0;
-      cashDifference = 0;
-      hasSavedToday = false;
+      resetComputedValues();
     });
   }
 

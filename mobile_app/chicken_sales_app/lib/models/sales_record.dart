@@ -73,6 +73,14 @@ class SalesRecord {
     required this.riceRemainingInput,
   });
 
+  static int _toInt(dynamic value, {int fallback = 0}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -111,9 +119,13 @@ class SalesRecord {
 
   factory SalesRecord.fromMap(Map<String, dynamic> map) {
     final fallbackDate = (map['date'] ?? '').toString();
-    final legacyTotalSales = (map['totalSales'] ?? 0) as int;
-    final legacyGrossSales = (map['grossSales'] ?? legacyTotalSales) as int;
-    final legacyNetSales = (map['netSales'] ?? legacyTotalSales) as int;
+
+    final legacyTotalSales = _toInt(map['totalSales']);
+    final legacyGrossSales = _toInt(
+      map['grossSales'],
+      fallback: legacyTotalSales,
+    );
+    final legacyNetSales = _toInt(map['netSales'], fallback: legacyTotalSales);
 
     return SalesRecord(
       id: (map['id'] ?? '').toString(),
@@ -127,21 +139,21 @@ class SalesRecord {
       grossSales: legacyGrossSales,
       netSales: legacyNetSales,
       totalSales: legacyNetSales,
-      ticketDeduction: (map['ticketDeduction'] ?? 0) as int,
-      expectedCash: (map['expectedCash'] ?? 0) as int,
-      actualCash: (map['actualCash'] ?? 0) as int,
-      difference: (map['difference'] ?? 0) as int,
-      chickenLargePrice: (map['chickenLargePrice'] ?? 20) as int,
-      chickenSmallPrice:
-          (map['chickenSmallPrice'] ?? map['chicken10Price'] ?? 12) as int,
-      lumpiaPrice: (map['lumpiaPrice'] ?? 5) as int,
-      ricePrice: (map['ricePrice'] ?? 10) as int,
-      soldChickenLarge:
-          (map['soldChickenLarge'] ?? map['soldChicken20'] ?? 0) as int,
-      soldChickenSmall:
-          (map['soldChickenSmall'] ?? map['soldChicken10'] ?? 0) as int,
-      soldLumpia: (map['soldLumpia'] ?? 0) as int,
-      soldRice: (map['soldRice'] ?? 0) as int,
+      ticketDeduction: _toInt(map['ticketDeduction']),
+      expectedCash: _toInt(map['expectedCash']),
+      actualCash: _toInt(map['actualCash']),
+      difference: _toInt(map['difference']),
+      chickenLargePrice: _toInt(map['chickenLargePrice'], fallback: 20),
+      chickenSmallPrice: _toInt(
+        map['chickenSmallPrice'] ?? map['chicken10Price'],
+        fallback: 12,
+      ),
+      lumpiaPrice: _toInt(map['lumpiaPrice'], fallback: 5),
+      ricePrice: _toInt(map['ricePrice'], fallback: 10),
+      soldChickenLarge: _toInt(map['soldChickenLarge'] ?? map['soldChicken20']),
+      soldChickenSmall: _toInt(map['soldChickenSmall'] ?? map['soldChicken10']),
+      soldLumpia: _toInt(map['soldLumpia']),
+      soldRice: _toInt(map['soldRice']),
       startingCashInput: (map['startingCashInput'] ?? '').toString(),
       actualCashCountedInput: (map['actualCashCountedInput'] ?? '').toString(),
       chickenLargeBeginningInput:

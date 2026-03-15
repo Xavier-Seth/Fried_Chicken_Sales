@@ -40,35 +40,76 @@ class SettingsService {
   static const String _ricePriceKey = 'price_rice';
   static const String _localeCodeKey = 'app_locale_code';
 
+  static const Set<String> _supportedLocaleCodes = {'en', 'fil'};
+
+  static int _sanitizePrice(int? value, int fallback) {
+    if (value == null || value < 0) return fallback;
+    return value;
+  }
+
+  static String _sanitizeLocaleCode(String? localeCode) {
+    if (localeCode == null) return 'en';
+
+    final normalized = localeCode.trim().toLowerCase();
+    if (_supportedLocaleCodes.contains(normalized)) {
+      return normalized;
+    }
+
+    return 'en';
+  }
+
   static Future<AppSettings> getSettings() async {
     final prefs = await SharedPreferences.getInstance();
 
     return AppSettings(
-      chickenLargePrice:
-          prefs.getInt(_chickenLargePriceKey) ?? defaultChickenLargePrice,
-      chickenSmallPrice:
-          prefs.getInt(_chickenSmallPriceKey) ?? defaultChickenSmallPrice,
-      lumpiaPrice: prefs.getInt(_lumpiaPriceKey) ?? defaultLumpiaPrice,
-      ricePrice: prefs.getInt(_ricePriceKey) ?? defaultRicePrice,
+      chickenLargePrice: _sanitizePrice(
+        prefs.getInt(_chickenLargePriceKey),
+        defaultChickenLargePrice,
+      ),
+      chickenSmallPrice: _sanitizePrice(
+        prefs.getInt(_chickenSmallPriceKey),
+        defaultChickenSmallPrice,
+      ),
+      lumpiaPrice: _sanitizePrice(
+        prefs.getInt(_lumpiaPriceKey),
+        defaultLumpiaPrice,
+      ),
+      ricePrice: _sanitizePrice(prefs.getInt(_ricePriceKey), defaultRicePrice),
     );
   }
 
   static Future<void> saveSettings(AppSettings settings) async {
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.setInt(_chickenLargePriceKey, settings.chickenLargePrice);
-    await prefs.setInt(_chickenSmallPriceKey, settings.chickenSmallPrice);
-    await prefs.setInt(_lumpiaPriceKey, settings.lumpiaPrice);
-    await prefs.setInt(_ricePriceKey, settings.ricePrice);
+    final sanitizedSettings = AppSettings(
+      chickenLargePrice: _sanitizePrice(
+        settings.chickenLargePrice,
+        defaultChickenLargePrice,
+      ),
+      chickenSmallPrice: _sanitizePrice(
+        settings.chickenSmallPrice,
+        defaultChickenSmallPrice,
+      ),
+      lumpiaPrice: _sanitizePrice(settings.lumpiaPrice, defaultLumpiaPrice),
+      ricePrice: _sanitizePrice(settings.ricePrice, defaultRicePrice),
+    );
+
+    await Future.wait([
+      prefs.setInt(_chickenLargePriceKey, sanitizedSettings.chickenLargePrice),
+      prefs.setInt(_chickenSmallPriceKey, sanitizedSettings.chickenSmallPrice),
+      prefs.setInt(_lumpiaPriceKey, sanitizedSettings.lumpiaPrice),
+      prefs.setInt(_ricePriceKey, sanitizedSettings.ricePrice),
+    ]);
   }
 
   static Future<String> getSavedLocaleCode() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_localeCodeKey) ?? 'en';
+    return _sanitizeLocaleCode(prefs.getString(_localeCodeKey));
   }
 
   static Future<void> saveLocaleCode(String localeCode) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_localeCodeKey, localeCode);
+    final sanitizedLocaleCode = _sanitizeLocaleCode(localeCode);
+    await prefs.setString(_localeCodeKey, sanitizedLocaleCode);
   }
 }
